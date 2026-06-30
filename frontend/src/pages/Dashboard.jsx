@@ -23,27 +23,27 @@ export default function Dashboard() {
   }, [])
 
   const cards = [
-    { label: 'Total Orders',      value: stats.orders,    bg: 'bg-blue-50',   text: 'text-blue-700',   icon: '📋' },
-    { label: 'Inventory Items',   value: stats.inventory, bg: 'bg-emerald-50',text: 'text-emerald-700',icon: '📦' },
-    { label: 'Products',          value: stats.products,  bg: 'bg-purple-50', text: 'text-purple-700', icon: '🏷️' },
-    { label: 'Low Stock Alerts',  value: stats.lowStock,  bg: 'bg-red-50',    text: 'text-red-700',    icon: '⚠️' },
+    { label: 'Total Orders',     value: stats.orders,    bg: 'bg-blue-50',    text: 'text-blue-700',    icon: '📋' },
+    { label: 'Inventory Items',  value: stats.inventory, bg: 'bg-emerald-50', text: 'text-emerald-700', icon: '📦' },
+    { label: 'Products',         value: stats.products,  bg: 'bg-purple-50',  text: 'text-purple-700',  icon: '🏷️' },
+    { label: 'Low Stock Alerts', value: stats.lowStock,  bg: 'bg-red-50',     text: 'text-red-700',     icon: '⚠️' },
   ]
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-800">
+    <div className="p-4 md:p-8">
+      <div className="mb-6 md:mb-8">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-800">
           Welcome back, {user?.name?.split(' ')[0]} 👋
         </h2>
         <p className="text-gray-400 text-sm mt-1">Here's what's happening today.</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
         {cards.map(card => (
-          <div key={card.label} className={`${card.bg} rounded-xl p-6`}>
-            <div className="text-2xl mb-3">{card.icon}</div>
-            <div className={`text-3xl font-bold ${card.text}`}>{card.value}</div>
-            <div className="text-sm text-gray-500 mt-1">{card.label}</div>
+          <div key={card.label} className={`${card.bg} rounded-xl p-4 md:p-6`}>
+            <div className="text-xl md:text-2xl mb-2 md:mb-3">{card.icon}</div>
+            <div className={`text-2xl md:text-3xl font-bold ${card.text}`}>{card.value}</div>
+            <div className="text-xs md:text-sm text-gray-500 mt-1">{card.label}</div>
           </div>
         ))}
       </div>

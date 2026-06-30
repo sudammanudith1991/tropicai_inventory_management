@@ -37,13 +37,13 @@ export default function Purchases() {
   const inputClass = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500'
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold text-gray-800">Wholesale Purchase</h2>
+    <div className="p-4 md:p-8">
+      <div className="mb-6 md:mb-8">
+        <h2 className="text-xl md:text-2xl font-bold text-gray-800">Wholesale Purchase</h2>
         <p className="text-sm text-gray-400 mt-1">Add new stock from a wholesale purchase.</p>
       </div>
 
-      <div className="max-w-2xl bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 md:p-8 max-w-2xl">
         {success && (
           <div className="mb-6 p-3 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-lg text-sm font-medium">
             ✓ Inventory added successfully
@@ -56,7 +56,7 @@ export default function Purchases() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">SKU <span className="text-red-400">*</span></label>
               <input type="text" value={form.sku} onChange={set('sku')} required placeholder="e.g. MANGO-01" className={inputClass} />
@@ -78,7 +78,7 @@ export default function Purchases() {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Quantity <span className="text-red-400">*</span></label>
               <input type="number" min="1" value={form.quantity} onChange={set('quantity')} required placeholder="0" className={inputClass} />
@@ -93,7 +93,7 @@ export default function Purchases() {
             </div>
           </div>
 
-          <div className="pt-2 flex gap-3">
+          <div className="pt-2 flex flex-col sm:flex-row gap-3">
             <button
               type="submit"
               disabled={saving}
