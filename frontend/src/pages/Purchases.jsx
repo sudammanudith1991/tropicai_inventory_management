@@ -1,114 +1,116 @@
-// Purchases Page
-import { useEffect, useState } from 'react'
-import { purchasesApi, vendorsApi, productsApi } from '../api'
-import { format, startOfMonth } from 'date-fns'
-import toast from 'react-hot-toast'
+import { useState } from 'react'
+import api from '../api'
+
+const EMPTY = {
+  sku: '', name: '', description: '', quantity: '', unitPrice: '', reorderLevel: '10',
+}
 
 export default function Purchases() {
-  const [purchases, setPurchases] = useState([])
-  const [vendors, setVendors]     = useState([])
-  const [products, setProducts]   = useState([])
-  const [showForm, setShowForm]   = useState(false)
-  const [form, setForm] = useState({
-    purchaseDate: format(new Date(), 'yyyy-MM-dd'),
-    vendorId: '', productId: '', quantityKg: '', buyingPricePerKg: '', wastageKg: '', notes: ''
-  })
+  const [form, setForm] = useState(EMPTY)
+  const [saving, setSaving] = useState(false)
+  const [success, setSuccess] = useState(false)
+  const [error, setError] = useState('')
 
-  const from = format(startOfMonth(new Date()), 'yyyy-MM-dd')
-  const to   = format(new Date(), 'yyyy-MM-dd')
-
-  useEffect(() => {
-    purchasesApi.getAll(from, to).then(r => setPurchases(r.data))
-    vendorsApi.getAll().then(r => setVendors(r.data))
-    productsApi.getAll().then(r => setProducts(r.data))
-  }, [])
+  const set = key => e => setForm(f => ({ ...f, [key]: e.target.value }))
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setSaving(true)
+    setError('')
     try {
-      await purchasesApi.create({
+      await api.post('/inventory', {
         ...form,
-        vendorId: Number(form.vendorId),
-        productId: Number(form.productId),
-        quantityKg: Number(form.quantityKg),
-        buyingPricePerKg: Number(form.buyingPricePerKg),
-        wastageKg: form.wastageKg ? Number(form.wastageKg) : 0,
+        quantity:     Number(form.quantity),
+        unitPrice:    Number(form.unitPrice),
+        reorderLevel: Number(form.reorderLevel),
       })
-      toast.success('Purchase recorded')
-      setShowForm(false)
-      purchasesApi.getAll(from, to).then(r => setPurchases(r.data))
-    } catch { toast.error('Failed to save purchase') }
+      setForm(EMPTY)
+      setSuccess(true)
+      setTimeout(() => setSuccess(false), 4000)
+    } catch (err) {
+      setError(err.response?.data?.message ?? 'Failed to add inventory item')
+    } finally {
+      setSaving(false)
+    }
   }
 
-  const totalCost = purchases.reduce((s, p) => s + p.quantityKg * p.buyingPricePerKg, 0)
+  const inputClass = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500'
 
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-bold text-gray-800">Vendor Purchases</h2>
-          <p className="text-sm text-gray-500">Total: Rs. {totalCost.toLocaleString()}</p>
-        </div>
-        <button onClick={() => setShowForm(!showForm)}
-          className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600">
-          + Add Purchase
-        </button>
+    <div className="p-8">
+      <div className="mb-8">
+        <h2 className="text-2xl font-bold text-gray-800">Wholesale Purchase</h2>
+        <p className="text-sm text-gray-400 mt-1">Add new stock from a wholesale purchase.</p>
       </div>
 
-      {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl p-4 grid grid-cols-2 md:grid-cols-3 gap-3">
-          <div><label className="label">Date</label><input type="date" className="input" value={form.purchaseDate} onChange={e => setForm(f => ({...f, purchaseDate: e.target.value}))} required /></div>
-          <div><label className="label">Vendor</label>
-            <select className="input" value={form.vendorId} onChange={e => setForm(f => ({...f, vendorId: e.target.value}))} required>
-              <option value="">Select…</option>
-              {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-            </select>
+      <div className="max-w-2xl bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+        {success && (
+          <div className="mb-6 p-3 bg-emerald-50 border border-emerald-100 text-emerald-700 rounded-lg text-sm font-medium">
+            ✓ Inventory added successfully
           </div>
-          <div><label className="label">Product</label>
-            <select className="input" value={form.productId} onChange={e => setForm(f => ({...f, productId: e.target.value}))} required>
-              <option value="">Select…</option>
-              {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+        )}
+        {error && (
+          <div className="mb-6 p-3 bg-red-50 border border-red-100 text-red-600 rounded-lg text-sm">
+            {error}
           </div>
-          <div><label className="label">Quantity (kg)</label><input type="number" step="0.01" className="input" value={form.quantityKg} onChange={e => setForm(f => ({...f, quantityKg: e.target.value}))} required /></div>
-          <div><label className="label">Buy Price / kg (Rs.)</label><input type="number" step="0.01" className="input" value={form.buyingPricePerKg} onChange={e => setForm(f => ({...f, buyingPricePerKg: e.target.value}))} required /></div>
-          <div><label className="label">Wastage (kg)</label><input type="number" step="0.01" className="input" value={form.wastageKg} onChange={e => setForm(f => ({...f, wastageKg: e.target.value}))} /></div>
-          <div className="col-span-full flex gap-2">
-            <button type="submit" className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm">Save</button>
-            <button type="button" onClick={() => setShowForm(false)} className="text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">SKU <span className="text-red-400">*</span></label>
+              <input type="text" value={form.sku} onChange={set('sku')} required placeholder="e.g. MANGO-01" className={inputClass} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Product Name <span className="text-red-400">*</span></label>
+              <input type="text" value={form.name} onChange={set('name')} required placeholder="e.g. Fresh Mango" className={inputClass} />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea
+              value={form.description}
+              onChange={set('description')}
+              rows={2}
+              placeholder="Optional description"
+              className={`${inputClass} resize-none`}
+            />
+          </div>
+
+          <div className="grid grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Quantity <span className="text-red-400">*</span></label>
+              <input type="number" min="1" value={form.quantity} onChange={set('quantity')} required placeholder="0" className={inputClass} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Unit Price ($) <span className="text-red-400">*</span></label>
+              <input type="number" min="0" step="0.01" value={form.unitPrice} onChange={set('unitPrice')} required placeholder="0.00" className={inputClass} />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Reorder Level</label>
+              <input type="number" min="0" value={form.reorderLevel} onChange={set('reorderLevel')} placeholder="10" className={inputClass} />
+            </div>
+          </div>
+
+          <div className="pt-2 flex gap-3">
+            <button
+              type="submit"
+              disabled={saving}
+              className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white px-8 py-2.5 rounded-lg text-sm font-medium transition-colors"
+            >
+              {saving ? 'Adding...' : 'Add to Inventory'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setForm(EMPTY)}
+              className="border border-gray-300 text-gray-600 px-6 py-2.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+            >
+              Clear
+            </button>
           </div>
         </form>
-      )}
-
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-600 text-xs uppercase">
-            <tr>
-              {['Date','Vendor','Product','Qty (kg)','Price/kg','Total Cost','Wastage'].map(h => (
-                <th key={h} className="px-4 py-3 text-left">{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {purchases.map(p => (
-              <tr key={p.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3">{p.purchaseDate}</td>
-                <td className="px-4 py-3">{p.vendor?.name}</td>
-                <td className="px-4 py-3 font-medium">{p.product?.name}</td>
-                <td className="px-4 py-3">{p.quantityKg}</td>
-                <td className="px-4 py-3">Rs. {p.buyingPricePerKg?.toLocaleString()}</td>
-                <td className="px-4 py-3 font-medium text-green-700">Rs. {(p.quantityKg * p.buyingPricePerKg)?.toLocaleString()}</td>
-                <td className="px-4 py-3 text-red-500">{p.wastageKg || 0}</td>
-              </tr>
-            ))}
-            {purchases.length === 0 && (
-              <tr><td colSpan={7} className="text-center py-8 text-gray-400">No purchases this month</td></tr>
-            )}
-          </tbody>
-        </table>
       </div>
-
-      <style>{`.label{display:block;font-size:0.75rem;font-weight:500;color:#4b5563;margin-bottom:0.25rem}.input{width:100%;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.4rem 0.6rem;font-size:0.875rem;outline:none}`}</style>
     </div>
   )
 }

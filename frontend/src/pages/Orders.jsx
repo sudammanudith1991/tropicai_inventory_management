@@ -1,127 +1,206 @@
-// Orders Page
-import { useEffect, useState } from 'react'
-import { ordersApi, customersApi, productsApi } from '../api'
-import { format, startOfMonth } from 'date-fns'
-import toast from 'react-hot-toast'
+import { useState, useEffect } from 'react'
+import api from '../api'
 
-export function Orders() {
-  const [orders, setOrders]     = useState([])
-  const [customers, setCustomers] = useState([])
-  const [products, setProducts]   = useState([])
-  const [showForm, setShowForm]   = useState(false)
-  const [form, setForm] = useState({
-    orderDate: format(new Date(), 'yyyy-MM-dd'),
-    customerId: '', status: 'PAID', notes: '',
-    items: [{ productId: '', quantityKg: '', sellingPricePerKg: '', settledAmount: '' }]
-  })
+const STATUS_COLORS = {
+  PENDING:    'bg-yellow-100 text-yellow-700',
+  CONFIRMED:  'bg-blue-100 text-blue-700',
+  PROCESSING: 'bg-indigo-100 text-indigo-700',
+  SHIPPED:    'bg-orange-100 text-orange-700',
+  DELIVERED:  'bg-emerald-100 text-emerald-700',
+  CANCELLED:  'bg-red-100 text-red-700',
+}
 
-  const from = format(startOfMonth(new Date()), 'yyyy-MM-dd')
-  const to   = format(new Date(), 'yyyy-MM-dd')
+const STATUSES = ['PENDING', 'CONFIRMED', 'PROCESSING', 'SHIPPED', 'DELIVERED', 'CANCELLED']
 
-  const load = () => ordersApi.getAll(from, to).then(r => setOrders(r.data))
-  useEffect(() => {
-    load()
-    customersApi.getAll().then(r => setCustomers(r.data))
-    productsApi.getAll().then(r => setProducts(r.data))
-  }, [])
+const EMPTY = {
+  orderNumber: '', customerName: '', customerEmail: '',
+  status: 'PENDING', totalAmount: '', notes: '',
+}
 
-  const addItem = () => setForm(f => ({ ...f, items: [...f.items, { productId: '', quantityKg: '', sellingPricePerKg: '', settledAmount: '' }] }))
-  const updateItem = (i, key, val) => setForm(f => { const items = [...f.items]; items[i] = { ...items[i], [key]: val }; return { ...f, items } })
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    try {
-      await ordersApi.create({
-        ...form,
-        customerId: Number(form.customerId),
-        items: form.items.map(it => ({
-          productId: Number(it.productId),
-          quantityKg: Number(it.quantityKg),
-          sellingPricePerKg: Number(it.sellingPricePerKg),
-          settledAmount: it.settledAmount ? Number(it.settledAmount) : 0,
-        }))
-      })
-      toast.success('Order recorded')
-      setShowForm(false)
-      load()
-    } catch { toast.error('Failed to save order') }
-  }
-
+function Modal({ title, onClose, children }) {
   return (
-    <div className="p-6 space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-gray-800">Customer Orders</h2>
-        <button onClick={() => setShowForm(!showForm)} className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-600">
-          + New Order
-        </button>
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-md">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+          <h3 className="text-base font-semibold text-gray-800">{title}</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        </div>
+        {children}
       </div>
-
-      {showForm && (
-        <form onSubmit={handleSubmit} className="bg-white border border-gray-200 rounded-xl p-4 space-y-3">
-          <div className="grid grid-cols-3 gap-3">
-            <div><label className="label">Date</label><input type="date" className="input" value={form.orderDate} onChange={e => setForm(f => ({...f, orderDate: e.target.value}))} required /></div>
-            <div><label className="label">Customer</label>
-              <select className="input" value={form.customerId} onChange={e => setForm(f => ({...f, customerId: e.target.value}))} required>
-                <option value="">Select…</option>
-                {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
-            </div>
-            <div><label className="label">Status</label>
-              <select className="input" value={form.status} onChange={e => setForm(f => ({...f, status: e.target.value}))}>
-                <option value="PAID">Paid</option>
-                <option value="CREDIT">Credit</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-gray-500 mb-2">Items</p>
-            {form.items.map((item, i) => (
-              <div key={i} className="grid grid-cols-4 gap-2 mb-2">
-                <select className="input" value={item.productId} onChange={e => updateItem(i, 'productId', e.target.value)} required>
-                  <option value="">Product…</option>
-                  {products.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
-                <input type="number" step="0.01" placeholder="Qty kg" className="input" value={item.quantityKg} onChange={e => updateItem(i, 'quantityKg', e.target.value)} required />
-                <input type="number" step="0.01" placeholder="Price/kg" className="input" value={item.sellingPricePerKg} onChange={e => updateItem(i, 'sellingPricePerKg', e.target.value)} required />
-                <input type="number" step="0.01" placeholder="Settled Rs." className="input" value={item.settledAmount} onChange={e => updateItem(i, 'settledAmount', e.target.value)} />
-              </div>
-            ))}
-            <button type="button" onClick={addItem} className="text-xs text-green-700 hover:underline">+ Add item</button>
-          </div>
-          <div className="flex gap-2">
-            <button type="submit" className="bg-green-700 text-white px-4 py-2 rounded-lg text-sm">Save Order</button>
-            <button type="button" onClick={() => setShowForm(false)} className="text-sm text-gray-500">Cancel</button>
-          </div>
-        </form>
-      )}
-
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-gray-500 text-xs uppercase">
-            <tr>{['Date','Customer','Revenue','Settled','Credit','Status'].map(h => <th key={h} className="px-4 py-3 text-left">{h}</th>)}</tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100">
-            {orders.map(o => (
-              <tr key={o.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3">{o.orderDate}</td>
-                <td className="px-4 py-3 font-medium">{o.customer?.name}</td>
-                <td className="px-4 py-3 text-green-700 font-medium">Rs. {Number(o.totalRevenue).toLocaleString()}</td>
-                <td className="px-4 py-3">Rs. {Number(o.settledAmount).toLocaleString()}</td>
-                <td className="px-4 py-3 text-amber-600">Rs. {Number(o.totalCredit).toLocaleString()}</td>
-                <td className="px-4 py-3">
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${o.status === 'PAID' ? 'bg-green-100 text-green-700' : o.status === 'CREDIT' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
-                    {o.status}
-                  </span>
-                </td>
-              </tr>
-            ))}
-            {orders.length === 0 && <tr><td colSpan={6} className="text-center py-8 text-gray-400">No orders this month</td></tr>}
-          </tbody>
-        </table>
-      </div>
-      <style>{`.label{display:block;font-size:0.75rem;font-weight:500;color:#4b5563;margin-bottom:0.25rem}.input{width:100%;border:1px solid #d1d5db;border-radius:0.5rem;padding:0.4rem 0.6rem;font-size:0.875rem;outline:none}`}</style>
     </div>
   )
 }
 
-export default Orders
+export default function Orders() {
+  const [orders, setOrders] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [modalOpen, setModalOpen] = useState(false)
+  const [editing, setEditing] = useState(null)
+  const [form, setForm] = useState(EMPTY)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [saving, setSaving] = useState(false)
+
+  const load = () => {
+    setLoading(true)
+    api.get('/orders')
+      .then(r => setOrders(Array.isArray(r.data) ? r.data : []))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, [])
+
+  const openCreate = () => { setEditing(null); setForm(EMPTY); setModalOpen(true) }
+  const openEdit = (order) => { setEditing(order); setForm({ ...order, totalAmount: order.totalAmount ?? '' }); setModalOpen(true) }
+  const closeModal = () => { setModalOpen(false); setEditing(null) }
+
+  const set = key => e => setForm(f => ({ ...f, [key]: e.target.value }))
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    try {
+      const payload = { ...form, totalAmount: Number(form.totalAmount) }
+      editing ? await api.put(`/orders/${editing.id}`, payload)
+               : await api.post('/orders', payload)
+      closeModal()
+      load()
+    } catch (err) {
+      alert(err.response?.data?.message ?? 'Something went wrong')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleDelete = async () => {
+    await api.delete(`/orders/${deleteTarget}`)
+    setDeleteTarget(null)
+    load()
+  }
+
+  const field = (label, key, type = 'text', extra = {}) => (
+    <div key={key}>
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <input
+        type={type}
+        value={form[key]}
+        onChange={set(key)}
+        className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        {...extra}
+      />
+    </div>
+  )
+
+  return (
+    <div className="p-8">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800">Orders</h2>
+          <p className="text-sm text-gray-400 mt-1">{orders.length} orders total</p>
+        </div>
+        <button
+          onClick={openCreate}
+          className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        >
+          + New Order
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-16 text-gray-400">Loading...</div>
+      ) : (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 border-b border-gray-200">
+              <tr>
+                {['Order #', 'Customer', 'Email', 'Status', 'Total', 'Actions'].map(h => (
+                  <th key={h} className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {orders.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="px-6 py-16 text-center text-gray-400">No orders yet. Create your first one.</td>
+                </tr>
+              ) : orders.map(order => (
+                <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-gray-800">{order.orderNumber}</td>
+                  <td className="px-6 py-4 text-gray-600">{order.customerName}</td>
+                  <td className="px-6 py-4 text-gray-500">{order.customerEmail}</td>
+                  <td className="px-6 py-4">
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[order.status]}`}>
+                      {order.status}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 font-medium text-gray-700">${Number(order.totalAmount).toFixed(2)}</td>
+                  <td className="px-6 py-4">
+                    <div className="flex gap-3">
+                      <button onClick={() => openEdit(order)} className="text-blue-600 hover:text-blue-800 text-xs font-medium">Edit</button>
+                      <button onClick={() => setDeleteTarget(order.id)} className="text-red-500 hover:text-red-700 text-xs font-medium">Delete</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {modalOpen && (
+        <Modal title={editing ? 'Edit Order' : 'New Order'} onClose={closeModal}>
+          <form onSubmit={handleSubmit} className="p-6 space-y-4">
+            {field('Order Number', 'orderNumber', 'text', { required: true, placeholder: 'ORD-001' })}
+            {field('Customer Name', 'customerName', 'text', { required: true })}
+            {field('Customer Email', 'customerEmail', 'email')}
+            {field('Total Amount ($)', 'totalAmount', 'number', { required: true, min: '0', step: '0.01' })}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+              <select
+                value={form.status}
+                onChange={set('status')}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              >
+                {STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
+              <textarea
+                value={form.notes}
+                onChange={set('notes')}
+                rows={2}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={closeModal} className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="submit" disabled={saving} className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white py-2 rounded-lg text-sm font-medium transition-colors">
+                {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {deleteTarget && (
+        <Modal title="Delete Order" onClose={() => setDeleteTarget(null)}>
+          <div className="p-6 text-center">
+            <div className="text-4xl mb-3">🗑️</div>
+            <p className="text-gray-600 text-sm mb-6">Are you sure? This action cannot be undone.</p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteTarget(null)} className="flex-1 border border-gray-300 text-gray-600 py-2 rounded-lg text-sm font-medium">
+                Cancel
+              </button>
+              <button onClick={handleDelete} className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg text-sm font-medium transition-colors">
+                Delete
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}

@@ -1,16 +1,16 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { authApi } from '../api'
+import api from '../api'
 
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser]       = useState(null)
+  const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const token = localStorage.getItem('token')
     if (token) {
-      authApi.me()
+      api.get('/auth/me')
         .then(res => setUser(res.data))
         .catch(() => localStorage.removeItem('token'))
         .finally(() => setLoading(false))
@@ -19,12 +19,7 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  const login = async (username, password) => {
-    const res = await authApi.login({ username, password })
-    localStorage.setItem('token', res.data.token)
-    setUser({ username: res.data.username, role: res.data.role })
-    return res.data
-  }
+  const login = (token) => localStorage.setItem('token', token)
 
   const logout = () => {
     localStorage.removeItem('token')
@@ -32,7 +27,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, setUser, login, logout, loading }}>
       {children}
     </AuthContext.Provider>
   )

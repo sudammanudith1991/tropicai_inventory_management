@@ -1,13 +1,11 @@
 import { Outlet, NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-const NAV = [
-  { to: '/dashboard', label: '📊 Dashboard' },
-  { to: '/purchases', label: '🛒 Purchases' },
-  { to: '/orders',    label: '📦 Orders' },
-  { to: '/inventory', label: '🗃️ Inventory' },
-  { to: '/customers', label: '👥 Customers' },
-  { to: '/credits',   label: '💳 Credits' },
+const navItems = [
+  { to: '/',          label: 'Dashboard', icon: '▤'  },
+  { to: '/orders',    label: 'Orders',    icon: '📋' },
+  { to: '/inventory', label: 'Inventory', icon: '📦' },
+  { to: '/purchases', label: 'Purchases', icon: '🛒' },
 ]
 
 export default function Layout() {
@@ -18,38 +16,51 @@ export default function Layout() {
 
   return (
     <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className="w-56 bg-green-900 text-white flex flex-col">
-        <div className="px-5 py-6 border-b border-green-800">
-          <h1 className="text-xl font-bold tracking-wide">🌿 Tropicai</h1>
-          <p className="text-xs text-green-300 mt-1">Inventory System</p>
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col shrink-0">
+        <div className="p-6 border-b border-gray-200">
+          <h1 className="text-xl font-bold text-emerald-600">🌴 TropicAI</h1>
+          <p className="text-xs text-gray-400 mt-1">Inventory Management</p>
         </div>
-        <nav className="flex-1 py-4 space-y-1 px-2">
-          {NAV.map(({ to, label }) => (
+
+        <nav className="flex-1 p-4 space-y-1">
+          {navItems.map(item => (
             <NavLink
-              key={to} to={to}
+              key={item.to}
+              to={item.to}
+              end={item.to === '/'}
               className={({ isActive }) =>
-                `flex items-center px-3 py-2 rounded-lg text-sm transition-colors ${
-                  isActive ? 'bg-green-700 text-white' : 'text-green-200 hover:bg-green-800'
+                `flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  isActive
+                    ? 'bg-emerald-50 text-emerald-700'
+                    : 'text-gray-600 hover:bg-gray-100'
                 }`
               }
             >
-              {label}
+              <span>{item.icon}</span>
+              {item.label}
             </NavLink>
           ))}
         </nav>
-        <div className="p-4 border-t border-green-800">
-          <p className="text-xs text-green-300 mb-2">{user?.username} · {user?.role}</p>
+
+        <div className="p-4 border-t border-gray-200">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-700 font-bold text-sm">
+              {user?.name?.[0]?.toUpperCase() ?? 'U'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-700 truncate">{user?.name}</p>
+              <p className="text-xs text-gray-400 truncate">{user?.email}</p>
+            </div>
+          </div>
           <button
             onClick={handleLogout}
-            className="w-full text-xs bg-green-800 hover:bg-green-700 text-white py-1.5 rounded-lg transition-colors"
+            className="text-xs text-gray-400 hover:text-red-500 transition-colors"
           >
             Sign out
           </button>
         </div>
       </aside>
 
-      {/* Main */}
       <main className="flex-1 overflow-auto">
         <Outlet />
       </main>
