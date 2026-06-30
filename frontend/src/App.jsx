@@ -7,6 +7,7 @@ import Orders from './pages/Orders'
 import Inventory from './pages/Inventory'
 import Purchases from './pages/Purchases'
 import OAuth2Callback from './pages/OAuth2Callback'
+import Register from './pages/Register'
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth()
@@ -24,6 +25,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
           <Route path="/oauth2/callback" element={<OAuth2Callback />} />
           <Route path="/" element={<PrivateRoute><Layout /></PrivateRoute>}>
             <Route index element={<Dashboard />} />
